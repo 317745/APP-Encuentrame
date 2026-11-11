@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from sqlmodel import text, Session, select
 
 from services.connection import get_connection
-from schemas.schemas_fundaction import AuthFoundation, Foundation
+from schemas.schemas_fundation import AuthFoundation, Foundation
 
 router = APIRouter(prefix='/fundations')
 

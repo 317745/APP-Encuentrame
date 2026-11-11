@@ -5,9 +5,10 @@ from sqlmodel import SQLModel, Session, text
 from services.connection import verify_connection, engine
 
 from schemas.schemas_cat import Cats, CatPhotos
-from schemas.schemas_fundaction import Foundation, AuthFoundation
+from schemas.schemas_fundation import Foundation, AuthFoundation
+from schemas.schemas_user import User, AuthUser
 
-from routers import routers_fundation, routers_cat
+from routers import routers_fundation, routers_cat, routers_user
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,3 +24,4 @@ def on_startup():
      
 app.include_router(routers_fundation.router)
 app.include_router(routers_cat.router)
+app.include_router(routers_user.router)
