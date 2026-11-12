@@ -1,12 +1,22 @@
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Form
 from sqlmodel import text, Session, select
+from supabase import create_client, Client
+from dotenv import load_dotenv, find_dotenv
 
 import uuid
+import os
 
 from services.connection import get_connection
 from schemas.schemas_cat import Cats, CatPhotos
 
+load_dotenv(find_dotenv())
+
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 router = APIRouter(prefix="/cats")
+
 
 #----------------------------------------- G E T -----------------------------------------
 
@@ -91,21 +101,57 @@ async def register(cats_data: Cats, session: Session = Depends(get_connection)):
             detail=f"Could not register Cat: {str(e)}"
         )
 
-@router.post('/register/photo/', status_code=status.HTTP_201_CREATED)
-async def upload_cat_photo(photo_data: CatPhotos, session: Session = Depends(get_connection)):
+@router.post('/register/photos/', status_code=status.HTTP_201_CREATED)
+async def upload_cat_photo(
+        cat_id: uuid.UUID = Form(...),
+        file: UploadFile = File(...),
+        session: Session = Depends(get_connection)
+    ):
+    allowed_content_types = ["image/jpeg", "image/jpg"]
+    if file.content_type not in allowed_content_types:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Formato no permitido. Solo se aceptan imágenes en formato JPG o JPEG."
+        )
+
+    file_extension = file.filename.split(".")[-1].lower() if "." in file.filename else ""
+    if file_extension not in ["jpg", "jpeg"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="La extensión del archivo debe ser .jpg o .jpeg."
+        )
+
     try:
-        session.add(photo_data)
+        file_bytes = await file.read()
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_path = f"cats/{unique_filename}"
+        bucket_name = "cat-photos"
+
+        supabase.storage.from_(bucket_name).upload(
+            path=file_path,
+            file=file_bytes,
+            file_options={"content-type": file.content_type}
+        )
+
+        image_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
+
+        new_photo = CatPhotos(
+            cat_id=cat_id,
+            image_url=image_url
+        )
+        
+        session.add(new_photo)
         session.commit()
-        session.refresh(photo_data)
+        session.refresh(new_photo)
 
         return {
-            'msg': 'Cat photo uploaded successfully.',
-            'data': photo_data.model_dump()
+            "message": "Foto registrada con éxito.",
+            "data": new_photo.model_dump()
         }
 
     except Exception as e:
         session.rollback()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not upload cat photo: {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error al procesar la imagen: {str(e)}"
         )

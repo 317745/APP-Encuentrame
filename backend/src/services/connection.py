@@ -6,10 +6,9 @@ from sqlmodel import create_engine, Session, text
 
 load_dotenv(find_dotenv())
 
-POSTGRES_URI = os.getenv("POSTGRES_URI")
-print(POSTGRES_URI)
+SUPABASE_URI = os.getenv("SUPABASE_URI")
 
-engine = create_engine(POSTGRES_URI, echo=True, pool_pre_ping=True)
+engine = create_engine(SUPABASE_URI, echo=True, pool_pre_ping=True)
 
 def verify_connection(attempts: int = 5, wait: int = 3):
     print(f"Establishing the DB connection, attempt 1/{attempts}")
