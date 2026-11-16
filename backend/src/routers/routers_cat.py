@@ -7,6 +7,7 @@ import uuid
 import os
 
 from services.connection import get_connection
+from services.yolo_service import crop_img
 from schemas.schemas_cat import Cats, CatPhotos
 
 load_dotenv(find_dotenv())
@@ -91,7 +92,7 @@ async def register(cats_data: Cats, session: Session = Depends(get_connection)):
 
         return {
             'msg': 'Cat created succesfully.',
-            'data': new_cat_record
+            'info': new_cat_record
         }
 
     except Exception as e:
@@ -101,7 +102,7 @@ async def register(cats_data: Cats, session: Session = Depends(get_connection)):
             detail=f"Could not register Cat: {str(e)}"
         )
 
-@router.post('/register/photos/', status_code=status.HTTP_201_CREATED)
+@router.post('/register/photo/', status_code=status.HTTP_201_CREATED)
 async def upload_cat_photo(
         cat_id: uuid.UUID = Form(...),
         file: UploadFile = File(...),
@@ -122,16 +123,38 @@ async def upload_cat_photo(
         )
 
     try:
+        existing_photos = session.exec(
+            select(CatPhotos).where(CatPhotos.cat_id == cat_id)
+        ).all()
+        
+        current_count = len(existing_photos)
+        MAX_PHOTOS = 5
+
+        if current_count >= MAX_PHOTOS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Mala suerte, socio. Ya llegaste al límite de {MAX_PHOTOS} fotos para este michi. ¡Borrame alguna si quieres subir otra nueva!"
+            )
+        
         file_bytes = await file.read()
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
         file_path = f"cats/{unique_filename}"
         bucket_name = "cat-photos"
 
+        cat_detecction_bytes = crop_img(file_bytes=file_bytes)
+        if not cat_detecction_bytes["True"]:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=cat_detecction_bytes["msg"]
+            )
+
+        file_bytes = cat_detecction_bytes["cropped_image"]
         supabase.storage.from_(bucket_name).upload(
             path=file_path,
             file=file_bytes,
             file_options={"content-type": file.content_type}
         )
+        file_uploaded = True
 
         image_url = supabase.storage.from_(bucket_name).get_public_url(file_path)
 
@@ -146,11 +169,18 @@ async def upload_cat_photo(
 
         return {
             "message": "Foto registrada con éxito.",
-            "data": new_photo.model_dump()
+            "info": f"¡Anotada!\
+                Si le tomas fotos siempre desde el mismo lado,\
+                el sistema no va a poder reconocer sus marcas únicas.",
         }
 
     except Exception as e:
         session.rollback()
+        if file_uploaded:
+            try:
+                supabase.storage.from_(bucket_name).remove([file_path])
+            except Exception as cleanup_error:
+                print(f"Error al limpiar la imagen huérfana: {cleanup_error}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al procesar la imagen: {str(e)}"
