@@ -64,11 +64,13 @@ def crop_img(file_bytes: bytes, padding=1.1):
         min(h, new_ymax)
     ))
 
+    resized = cropped.resize((300, 300), Image.Resampling.LANCZOS)
+
     buffer = io.BytesIO()
-    cropped.save(buffer, format="JPEG")
-    cropped_bytes = buffer.getvalue()
+    resized.save(buffer, format="JPEG")
+    resized_bytes = buffer.getvalue()
 
     return {
         "True": True,
-        "cropped_image": cropped_bytes
+        "cropped_image": resized_bytes
     }
