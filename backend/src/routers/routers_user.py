@@ -67,3 +67,26 @@ async def register_user(user_data: User, session: Session = Depends(get_connecti
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Could not register user profile: {str(e)}"
         )
+
+@router.post("/login/", status_code=status.HTTP_200_OK)
+async def login(credentials: AuthUser, session: Session = Depends(get_connection)):
+    auth = session.exec(
+        select(AuthUser).where(AuthUser.email == credentials.email)
+    ).first()
+
+    if not auth or auth.password != credentials.password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Correo o contraseña incorrectos"
+        )
+
+    user = session.get(User, auth.id)
+
+    return {
+        "msg": "Login correcto",
+        "data": {
+            "id": str(auth.id),
+            "email": auth.email,
+            "name": user.name if user else None
+        }
+    }

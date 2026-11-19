@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from sqlmodel import SQLModel, Session, text
 
@@ -25,3 +26,11 @@ def on_startup():
 app.include_router(routers_fundation.router)
 app.include_router(routers_cat.router)
 app.include_router(routers_user.router)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=".*",
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

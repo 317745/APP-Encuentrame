@@ -79,6 +79,46 @@ async def get_cat_by_id(cat_id: uuid.UUID, session: Session = Depends(get_connec
             detail=f"The cat information could not be resolved: {str(e)}"
         )
 
+@router.get("/{actor_id}/cat_photos", status_code=status.HTTP_200_OK)
+def get_cat_by_actor_id(actor_id: uuid.UUID, session: Session = Depends(get_connection)):
+    try: 
+        statement = (
+            select(Cats, CatPhotos)
+            .outerjoin(CatPhotos, Cats.id == CatPhotos.cat_id)
+            .where(Cats.actor_id == actor_id)
+        )
+        
+        rows = session.exec(statement).all()
+
+        cats_map = {}  
+
+        for cat, photo in rows:
+            if cat.id not in cats_map:
+                cat_data = cat.model_dump()
+                cat_data["photos"] = []
+                cats_map[cat.id] = cat_data
+
+            if photo is not None:
+                cats_map[cat.id]["photos"].append(photo.image_url)
+
+        cats_list = []
+        for cat_data in cats_map.values():
+            count = len(cat_data["photos"])
+            cat_data["photos_count"] = count
+            cats_list.append(cat_data)
+
+        return {
+            "msg": 'The cat information was resolved successfully',
+            "info": {
+                "cats": cats_list
+            }
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"The cat information could not be resolved: {str(e)}"
+        )
+
 #----------------------------------------- P O S T -----------------------------------------
 
 @router.post('/register/cat/', status_code=status.HTTP_201_CREATED)
@@ -122,6 +162,10 @@ async def upload_cat_photo(
             detail="La extensión del archivo debe ser .jpg o .jpeg."
         )
 
+    file_uploaded = False    
+    file_path = None
+    bucket_name = "cat-photos"
+
     try:
         existing_photos = session.exec(
             select(CatPhotos).where(CatPhotos.cat_id == cat_id)
@@ -133,13 +177,12 @@ async def upload_cat_photo(
         if current_count >= MAX_PHOTOS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Mala suerte, socio. Ya llegaste al límite de {MAX_PHOTOS} fotos para este michi. ¡Borrame alguna si quieres subir otra nueva!"
+                detail=f"llegaste al límite de {MAX_PHOTOS} fotos para este michi. ¡Borrame alguna si quieres subir otra nueva!"
             )
         
         file_bytes = await file.read()
         unique_filename = f"{uuid.uuid4()}.{file_extension}"
         file_path = f"cats/{unique_filename}"
-        bucket_name = "cat-photos"
 
         cat_detecction_bytes = crop_img(file_bytes=file_bytes)
         if not cat_detecction_bytes["True"]:
@@ -173,7 +216,8 @@ async def upload_cat_photo(
                 Si le tomas fotos siempre desde el mismo lado,\
                 el sistema no va a poder reconocer sus marcas únicas.",
         }
-
+    except HTTPException:     
+        raise
     except Exception as e:
         session.rollback()
         if file_uploaded:

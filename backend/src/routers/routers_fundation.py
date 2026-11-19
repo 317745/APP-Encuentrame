@@ -68,3 +68,26 @@ def register_foundation(foundation_data: Foundation, session: Session = Depends(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Could not register foundation profile: {str(e)}"
         )
+
+@router.post("/login/", status_code=status.HTTP_200_OK)
+async def login(credentials: AuthFoundation, session: Session = Depends(get_connection)):
+    auth = session.exec(
+        select(AuthFoundation).where(AuthFoundation.email == credentials.email)
+    ).first()
+
+    if not auth or auth.password != credentials.password:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Correo o contraseña incorrectos"
+        )
+
+    user = session.get(Foundation, auth.id)
+
+    return {
+        "msg": "Login correcto",
+        "data": {
+            "id": str(auth.id),
+            "email": auth.email,
+            "name": user.name if user else None
+        }
+    }
