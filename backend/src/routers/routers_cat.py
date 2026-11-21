@@ -242,11 +242,27 @@ async def upload_cat_photo(
             detail=f"Error al procesar la imagen: {str(e)}"
         )
 
-@router.get("/matches/{embedding_id}", status_code=status.HTTP_200_OK)
-def get_cat_matches_by_embedding(
-    embedding_id: uuid.UUID,
+def get_cat_embedding_ids(session: Session, cat_id: uuid.UUID) -> list[uuid.UUID]:
+    rows = session.exec(
+        text("SELECT id FROM embeddings_cats WHERE cat_id = :cat_id"),
+        params={"cat_id": str(cat_id)},
+    ).all()
+    return [row[0] for row in rows]
+
+
+@router.get("/matches/cat/{cat_id}", status_code=status.HTTP_200_OK)
+def get_cat_matches_by_cat(
+    cat_id: uuid.UUID,
     session: Session = Depends(get_connection),
 ):
+    embedding_ids = get_cat_embedding_ids(session, cat_id)[:5]
+
+    if not embedding_ids:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Este gato no tiene embeddings registrados.",
+        )
+
     query = text("""
         WITH target AS (
             SELECT embedding AS vec
@@ -259,6 +275,8 @@ def get_cat_matches_by_embedding(
                 c.name AS name,
                 c.actor_type AS actor_type,
                 pc.image_url AS image_url,
+                f.email AS contact_email,
+                f.created_at AS actor_created_at,
                 (ec.embedding <=> t.vec) AS distancia_coseno,
                 ROUND(((1 - (ec.embedding <=> t.vec)) * 100)::numeric, 2) AS similitud
             FROM cats AS c
@@ -266,9 +284,11 @@ def get_cat_matches_by_embedding(
                 ON c.id = ec.cat_id
             LEFT JOIN photos_cats AS pc
                 ON ec.photo_id = pc.id
+            LEFT JOIN foundations AS f
+                ON c.actor_id = f.id
             CROSS JOIN target AS t
-            WHERE c.actor_type IN ("foundation", "colaborator")
-              AND ec.id <> :target_embedding_id
+            WHERE c.actor_type IN ('foundation', 'collaborator')
+              AND c.id <> :query_cat_id
             ORDER BY c.id, distancia_coseno ASC
         )
         SELECT
@@ -276,32 +296,50 @@ def get_cat_matches_by_embedding(
             name,
             actor_type,
             image_url,
+            contact_email,
+            actor_created_at,
             similitud
         FROM ranked_by_cat
         ORDER BY distancia_coseno ASC
         LIMIT 5;
-    """).bindparams(bindparam("actor_types", expanding=True))
+    """)
+
+    best_by_candidate: dict[str, dict] = {}
 
     try:
-        rows = session.exec(
-            query,
-            params={
-                "target_embedding_id": str(embedding_id)
-            },
-        ).mappings().all()
+        for emb_id in embedding_ids:
+            rows = session.exec(
+                query,
+                params={
+                    "target_embedding_id": str(emb_id),
+                    "query_cat_id": str(cat_id),
+                },
+            ).mappings().all()
 
-        return {
-            "matches": [
-                {
-                    "cat_id": str(r["cat_id"]),
-                    "name": r["name"],
-                    "actor_type": r["actor_type"],
-                    "image_url": r["image_url"],
-                    "similitud": float(r["similitud"]),
-                }
-                for r in rows
-            ]
-        }
+            for r in rows:
+                cand_id = str(r["cat_id"])
+                sim = float(r["similitud"])
+                if cand_id not in best_by_candidate or sim > best_by_candidate[cand_id]["similitud"]:
+                    created_at = r["actor_created_at"]
+                    best_by_candidate[cand_id] = {
+                        "cat_id": cand_id,
+                        "name": r["name"],
+                        "actor_type": r["actor_type"],
+                        "image_url": r["image_url"],
+                        "email": r["contact_email"],
+                        "created_at": created_at.isoformat() if created_at else None,
+                        "similitud": sim,
+                    }
+
+        matches = sorted(
+            best_by_candidate.values(),
+            key=lambda x: x["similitud"],
+            reverse=True,
+        )[:25]
+
+        return {"matches": matches}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

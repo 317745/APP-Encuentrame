@@ -24,6 +24,7 @@ const ACTOR_TYPE = { user: "user", fundation: "foundation" };
 const CATS = {
   byActor:     (actorId) => `/cats/${actorId}/cat_photos`,
   registerCat: "/cats/register/cat/",
+  matches:     (catId) => `/cats/matches/cat/${catId}`,
   uploadPhoto: "/cats/register/photo/"
 };
 

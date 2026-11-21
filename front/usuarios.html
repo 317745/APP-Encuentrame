@@ -91,6 +91,16 @@
     <div class="cat-grid" id="catGrid"></div>
   </main>
 
+  <dialog class="modal" id="matchesModal" aria-labelledby="matchesTitle">
+    <div class="modal__box">
+      <div class="modal__head">
+        <h2 class="modal__title" id="matchesTitle">Posibles coincidencias</h2>
+        <button type="button" class="modal__close" id="matchesClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal__body" id="matchesBody"></div>
+    </div>
+  </dialog>
+
   <script src="session.js"></script>
   <script src="config.js"></script>
   <script src="auth.js"></script>

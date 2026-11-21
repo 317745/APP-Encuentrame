@@ -73,6 +73,118 @@
     }
   }
 
+  /* ---------- coincidencias en ventana emergente (solo usuarios) ---------- */
+  const modal = document.getElementById("matchesModal");
+  const modalTitle = document.getElementById("matchesTitle");
+  const modalBody = document.getElementById("matchesBody");
+  if (modal) {
+    document.getElementById("matchesClose").addEventListener("click", () => modal.close());
+    modal.addEventListener("click", (e) => { if (e.target === modal) modal.close(); });   // clic en el fondo
+  }
+
+  const note = (text) => h("p", { class: "matches__note" }, text);
+  const ORG_LABEL = { foundation: "Fundación", collaborator: "Colaborador" };
+  const isEmail = (s) => typeof s === "string" && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+
+  function longDate(iso) {
+    const d = new Date(iso);
+    return isNaN(d) ? "" : d.toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  // Tiempo transcurrido desde iso hasta hoy: "2 años, 3 meses y 5 días"
+  function elapsed(iso) {
+    const start = new Date(iso);
+    if (isNaN(start)) return null;
+    const now = new Date();
+    let y = now.getFullYear() - start.getFullYear();
+    let m = now.getMonth() - start.getMonth();
+    let d = now.getDate() - start.getDate();
+    if (d < 0) { m--; d += new Date(now.getFullYear(), now.getMonth(), 0).getDate(); }
+    if (m < 0) { y--; m += 12; }
+    if (y < 0) return null;
+    const parts = [];
+    if (y) parts.push(y + (y === 1 ? " año" : " años"));
+    if (m) parts.push(m + (m === 1 ? " mes" : " meses"));
+    if (d) parts.push(d + (d === 1 ? " día" : " días"));
+    return parts.join(", ").replace(/, ([^,]*)$/, " y $1");   // "" si es de hoy
+  }
+
+  function orgBlock(m, cat) {
+    const label = ORG_LABEL[m.actor_type] || "Quien lo reportó";
+    const box = h("div", { class: "match__org" },
+      h("p", {}, h("strong", {}, m.actor_name ? label + ": " + m.actor_name : label)));
+
+    const since = m.created_at ? longDate(m.created_at) : "";
+    if (since) {
+      const t = elapsed(m.created_at);
+      box.append(h("p", {}, "Activa desde " + since + " (" + (t ? "hace " + t : "hoy") + ")"));
+    }
+
+    if (isEmail(m.email)) {
+      const subject = encodeURIComponent("Posible coincidencia: " + m.name);
+      const body = encodeURIComponent("Hola, creo que su gato «" + m.name + "» podría ser mi gato «" + (cat.name || "") + "». ¿Podemos hablar?");
+      box.append(
+        h("p", {}, "Correo: " + m.email),
+        h("a", { class: "btn btn--small", href: "mailto:" + m.email + "?subject=" + subject + "&body=" + body }, "Contactar")
+      );
+    } else {
+      box.append(h("p", {}, "Contacto no disponible."));
+    }
+    return box;
+  }
+
+  function matchItem(m, cat) {
+    const pct = Math.max(0, Math.min(100, Number(m.similitud) || 0));
+    const photo = m.image_url
+      ? h("img", { class: "match__img", src: m.image_url, alt: "Foto de " + m.name, loading: "lazy" })
+      : h("div", { class: "match__img match__img--empty" }, "Sin foto");
+    return h("li", { class: "match" },
+      h("div", { class: "match__top" },
+        photo,
+        h("div", { class: "match__info" },
+          h("strong", {}, m.name),
+          h("div", { class: "match__bar" }, h("span", { style: "width:" + pct + "%" }))),
+        h("span", { class: "match__pct" }, Math.round(pct) + "%")),
+      orgBlock(m, cat));
+  }
+
+  function renderMatches(cat, matches) {
+    const list = h("ul", { class: "matches__list" });
+    matches.forEach(m => list.append(matchItem(m, cat)));
+    modalBody.replaceChildren(list, note("Es una sugerencia automática: confirma comparando las fotos antes de contactar."));
+  }
+
+  async function openMatches(cat, count) {
+    if (!modal) return;
+    modalTitle.textContent = "Posibles coincidencias para " + (cat.name || "tu gato");
+    modalBody.replaceChildren(note(count ? "Buscando coincidencias…" : "Sube al menos una foto de este gato para buscar coincidencias."));
+    if (!modal.open) modal.showModal();
+    if (!count) return;
+
+    try {
+      const res = await fetch(API_BASE + CATS.matches(cat.id));
+      const data = await res.json().catch(() => ({}));
+
+      if (res.status === 404) {
+        modalBody.replaceChildren(note("Todavía estamos procesando las fotos de este gato. Intenta de nuevo en unos segundos."));
+        return;
+      }
+      if (!res.ok) throw new Error(errorText(data, res));
+
+      const matches = data.matches || [];
+      if (!matches.length) {
+        modalBody.replaceChildren(note("No encontramos coincidencias por ahora."));
+        return;
+      }
+      renderMatches(cat, matches);
+    } catch (err) {
+      console.error(err);
+      modalBody.replaceChildren(note(err instanceof TypeError
+        ? "No se pudo conectar con el servidor."
+        : "No pudimos buscar coincidencias: " + err.message));
+    }
+  }
+
   /* ---------- tarjeta de gato ---------- */
   function renderCat(cat) {
     const name = cat.name || "Gato sin nombre";
@@ -120,11 +232,20 @@
       upload = h("p", { class: "cat__max" }, "Llegaste al máximo de " + MAX_PHOTOS + " fotos");
     }
 
+    // botón de coincidencias: solo para usuarios
+    let matchesBtn = null;
+    if (user.role === "user" && modal) {
+      matchesBtn = h("button", { type: "button", class: "btn btn--ghost btn--small" }, "Ver coincidencias");
+      matchesBtn.addEventListener("click", () => openMatches(cat, count));
+    }
+
     return h("article", { class: "card cat" },
       h("div", { class: "cat__head" },
         h("h2", { class: "card__title" }, name),
         h("span", { class: "cat__count" }, count + "/" + MAX_PHOTOS + " fotos")),
-      gallery, dl, upload, statusEl);
+      gallery, dl,
+      h("div", { class: "cat__actions" }, upload, matchesBtn),
+      statusEl);
   }
 
   /* ---------- cargar ---------- */

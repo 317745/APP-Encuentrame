@@ -47,6 +47,7 @@ if (registerForm) {
     const confirm = registerForm.confirm.value;
 
     if (!name) return showMsg("Escribe un nombre.");
+    if (registerForm.consent && !registerForm.consent.checked) return showMsg("Debes autorizar que se muestre el correo de la fundación.");
     if (password.length < 8) return showMsg("La contraseña debe tener al menos 8 caracteres.");
     if (password !== confirm) return showMsg("Las contraseñas no coinciden.");
 
