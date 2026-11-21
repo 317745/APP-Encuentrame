@@ -61,15 +61,31 @@
     </div>
   </main>
 
-  <main class="dashboard" id="dashboard" hidden>
+  <main class="dashboard" id="dashboard" data-role="user" hidden>
     <section class="card dash__head">
       <img src="img/gato-icono.png" alt="" class="card__icon">
       <div>
         <h1 class="card__title" id="dashName">Hola</h1>
         <p id="dashEmail"></p>
+        <p id="dashMeta"></p>
         <p id="dashSummary"></p>
       </div>
     </section>
+
+    <form id="catForm" class="card cat-form" novalidate>
+      <h2 class="card__title">Registrar un gato</h2>
+      <div class="cat-form__fields">
+        <div>
+          <label for="catName">Nombre</label>
+          <input type="text" id="catName" maxlength="100" required placeholder="Ej: Michi">
+        </div>
+        <div>
+          <label for="catComuna">Comuna</label>
+          <input type="text" id="catComuna" maxlength="255" required placeholder="Ej: Comuna 17">
+        </div>
+        <button type="submit" class="btn btn--dark">Registrar gato</button>
+      </div>
+    </form>
 
     <p id="dashMsg" class="form-msg" role="status" aria-live="polite"></p>
     <div class="cat-grid" id="catGrid"></div>

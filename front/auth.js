@@ -81,7 +81,7 @@ if (loginForm) {
     try {
       const res = await request(ep.login, { email, password });
       try {
-        localStorage.setItem("user", JSON.stringify({ ...res.data, role }));
+        localStorage.setItem("user", JSON.stringify({ ...res.data, role, actor_type: ACTOR_TYPE[role] }));
         if (res.token) localStorage.setItem("token", res.token);
       } catch (_) {}
       location.href = HOME[role];

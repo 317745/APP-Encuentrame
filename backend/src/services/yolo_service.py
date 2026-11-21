@@ -4,7 +4,7 @@ import numpy as np
 import cv2
 from PIL import Image
 
-model = YOLO("src/models/yolo11m.pt")
+model = YOLO("../models/yolo11m.pt")
 def detect_cat(img):
     results = model(img, conf=0.25, classes=[15], save=False)
     boxes = results[0].boxes

@@ -4,6 +4,8 @@ from sqlmodel import text, Session, select
 from services.connection import get_connection
 from schemas.schemas_user import User, AuthUser
 
+import uuid
+
 router = APIRouter(prefix='/users')
 
 #----------------------------------------- G E T -----------------------------------------
@@ -12,7 +14,7 @@ router = APIRouter(prefix='/users')
 async def get_users(session: Session = Depends(get_connection)):
     try:
         statement = select(User)
-        results = session.exec(statement)
+        results = session.exec(statement).all()
 
         return {
             'msg': 'The users information was resolved successfully',
@@ -87,6 +89,8 @@ async def login(credentials: AuthUser, session: Session = Depends(get_connection
         "data": {
             "id": str(auth.id),
             "email": auth.email,
-            "name": user.name if user else None
+            "name": user.name if user else None,
+            "created_at": user.created_at if user else None,
+            "actor_type": "user"
         }
     }

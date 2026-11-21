@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, status, HTTPException, UploadFile, File, Form, BackgroundTasks
+from sqlalchemy import bindparam, text
 from sqlmodel import text, Session, select
 from supabase import create_client, Client
 from dotenv import load_dotenv, find_dotenv
@@ -6,9 +7,11 @@ from dotenv import load_dotenv, find_dotenv
 import uuid
 import os
 
-from services.connection import get_connection
+from services.connection import get_connection, engine
 from services.yolo_service import crop_img
-from schemas.schemas_cat import Cats, CatPhotos
+from services.save_embedding import save_cat_embedding
+from schemas.schemas_cat import Cats, CatPhotos, CatEmbeddings
+from services.embedding_service import embedding_service
 
 load_dotenv(find_dotenv())
 
@@ -144,6 +147,7 @@ async def register(cats_data: Cats, session: Session = Depends(get_connection)):
 
 @router.post('/register/photo/', status_code=status.HTTP_201_CREATED)
 async def upload_cat_photo(
+        background_tasks: BackgroundTasks,
         cat_id: uuid.UUID = Form(...),
         file: UploadFile = File(...),
         session: Session = Depends(get_connection)
@@ -210,6 +214,14 @@ async def upload_cat_photo(
         session.commit()
         session.refresh(new_photo)
 
+        background_tasks.add_task(
+            save_cat_embedding,
+            cat_id=cat_id,
+            photo_id=new_photo.id, 
+            image_bytes=file_bytes,
+            db_engine=engine,
+        )
+
         return {
             "message": "Foto registrada con éxito.",
             "info": f"¡Anotada!\
@@ -228,4 +240,70 @@ async def upload_cat_photo(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error al procesar la imagen: {str(e)}"
+        )
+
+@router.get("/matches/{embedding_id}", status_code=status.HTTP_200_OK)
+def get_cat_matches_by_embedding(
+    embedding_id: uuid.UUID,
+    session: Session = Depends(get_connection),
+):
+    query = text("""
+        WITH target AS (
+            SELECT embedding AS vec
+            FROM embeddings_cats
+            WHERE id = :target_embedding_id
+        ),
+        ranked_by_cat AS (
+            SELECT DISTINCT ON (c.id)
+                c.id AS cat_id,
+                c.name AS name,
+                c.actor_type AS actor_type,
+                pc.image_url AS image_url,
+                (ec.embedding <=> t.vec) AS distancia_coseno,
+                ROUND(((1 - (ec.embedding <=> t.vec)) * 100)::numeric, 2) AS similitud
+            FROM cats AS c
+            INNER JOIN embeddings_cats AS ec
+                ON c.id = ec.cat_id
+            LEFT JOIN photos_cats AS pc
+                ON ec.photo_id = pc.id
+            CROSS JOIN target AS t
+            WHERE c.actor_type IN ("foundation", "colaborator")
+              AND ec.id <> :target_embedding_id
+            ORDER BY c.id, distancia_coseno ASC
+        )
+        SELECT
+            cat_id,
+            name,
+            actor_type,
+            image_url,
+            similitud
+        FROM ranked_by_cat
+        ORDER BY distancia_coseno ASC
+        LIMIT 5;
+    """).bindparams(bindparam("actor_types", expanding=True))
+
+    try:
+        rows = session.exec(
+            query,
+            params={
+                "target_embedding_id": str(embedding_id)
+            },
+        ).mappings().all()
+
+        return {
+            "matches": [
+                {
+                    "cat_id": str(r["cat_id"]),
+                    "name": r["name"],
+                    "actor_type": r["actor_type"],
+                    "image_url": r["image_url"],
+                    "similitud": float(r["similitud"]),
+                }
+                for r in rows
+            ]
+        }
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Error al consultar coincidencias: {str(e)}",
         )

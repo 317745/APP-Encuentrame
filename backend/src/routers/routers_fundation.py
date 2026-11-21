@@ -81,13 +81,15 @@ async def login(credentials: AuthFoundation, session: Session = Depends(get_conn
             detail="Correo o contraseña incorrectos"
         )
 
-    user = session.get(Foundation, auth.id)
+    foundation = session.get(Foundation, auth.id)
 
     return {
         "msg": "Login correcto",
         "data": {
             "id": str(auth.id),
             "email": auth.email,
-            "name": user.name if user else None
+            "name": foundation.name if foundation else None,
+            "created_at": foundation.created_at if foundation else None,
+            "actor_type": "foundation"
         }
     }

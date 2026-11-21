@@ -4,17 +4,24 @@
   if (!dash) return;
 
   const user = Session.getUser();
-  if (!user || user.role !== "user") return;
+  if (!user || user.role !== dash.dataset.role) return;
 
   const MAX_PHOTOS = 5;               // el backend también lo valida
-  const HIDDEN_FIELDS = ["id", "actor_id", "photos", "photos_count", "name", "created_at"];
+  const HIDDEN_FIELDS = ["id", "actor_id", "actor_type", "photos", "photos_count", "name", "created_at"];
 
   const grid = document.getElementById("catGrid");
   const dashMsg = document.getElementById("dashMsg");
   const summary = document.getElementById("dashSummary");
 
-  document.getElementById("dashName").textContent = "Hola, " + (user.name || "usuario");
+  document.getElementById("dashName").textContent = "Hola, " + (user.name || "bienvenido");
   document.getElementById("dashEmail").textContent = user.email || "";
+  const meta = document.getElementById("dashMeta");
+
+  // "Miembro desde": viene en lo que devuelve el login (created_at), sin endpoint extra
+  if (user.created_at && meta) {
+    meta.textContent = "Miembro desde " + new Date(user.created_at)
+      .toLocaleDateString("es-CO", { year: "numeric", month: "long", day: "numeric" });
+  }
 
   /* ---------- helpers ---------- */
   function h(tag, attrs = {}, ...kids) {
@@ -122,17 +129,19 @@
 
   /* ---------- cargar ---------- */
   async function load() {
-    grid.replaceChildren(h("p", { class: "dash__state" }, "Cargando tus mascotas…"));
+    grid.replaceChildren(h("p", { class: "dash__state" }, "Cargando gatos…"));
     try {
       const res = await fetch(API_BASE + CATS.byActor(user.id));
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(errorText(data, res));
 
       const cats = (data.info && data.info.cats) || [];
-      summary.textContent = cats.length === 1 ? "1 mascota registrada" : cats.length + " mascotas registradas";
+      const totalPhotos = cats.reduce((n, c) => n + (c.photos_count ?? (c.photos || []).length), 0);
+      summary.textContent = (cats.length === 1 ? "1 gato registrado" : cats.length + " gatos registrados")
+        + " · " + totalPhotos + (totalPhotos === 1 ? " foto" : " fotos");
 
       if (!cats.length) {
-        grid.replaceChildren(h("p", { class: "dash__state" }, "Aún no tienes mascotas registradas."));
+        grid.replaceChildren(h("p", { class: "dash__state" }, "Aún no hay gatos registrados."));
         return;
       }
       grid.replaceChildren(...cats.map(renderCat));
@@ -142,8 +151,46 @@
       grid.replaceChildren(h("p", { class: "dash__state dash__state--error" },
         err instanceof TypeError
           ? "No se pudo conectar con el servidor. Revisa que la API esté encendida."
-          : "No pudimos cargar tus mascotas: " + err.message));
+          : "No pudimos cargar los gatos: " + err.message));
     }
+  }
+
+  /* ---------- registrar gato ---------- */
+  const catForm = document.getElementById("catForm");
+  if (catForm) {
+    const btn = catForm.querySelector("button");
+    catForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("catName").value.trim();
+      const comuna = document.getElementById("catComuna").value.trim();
+      if (!name || !comuna) return showMsg("Escribe el nombre y la comuna.", "error");
+
+      btn.disabled = true;
+      btn.textContent = "Registrando…";
+      try {
+        const res = await fetch(API_BASE + CATS.registerCat, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ actor_id: user.id, actor_type: ACTOR_TYPE[user.role], name, comuna })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          const detail = errorText(data, res);
+          throw new Error(/duplicate|unique|idx_actor_cat_name/i.test(detail)
+            ? "Ya hay un gato registrado con ese nombre."
+            : detail);
+        }
+        catForm.reset();
+        await load();
+        showMsg("¡Gato registrado! Ahora sube sus fotos desde su tarjeta.");
+      } catch (err) {
+        console.error(err);
+        showMsg(err instanceof TypeError ? "No se pudo conectar con el servidor." : err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Registrar gato";
+      }
+    });
   }
 
   load();
