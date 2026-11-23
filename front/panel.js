@@ -283,8 +283,9 @@
     catForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const name = document.getElementById("catName").value.trim();
-      const comuna = document.getElementById("catComuna").value.trim();
-      if (!name || !comuna) return showMsg("Escribe el nombre y la comuna.", "error");
+      const comuna = Number(document.getElementById("catComuna").value);
+      if (!name) return showMsg("Escribe el nombre del gato.", "error");
+      if (!Number.isInteger(comuna) || comuna < 1 || comuna > 22) return showMsg("Selecciona una comuna del 1 al 22.", "error");
 
       btn.disabled = true;
       btn.textContent = "Registrando…";

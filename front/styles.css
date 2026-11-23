@@ -178,6 +178,7 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outlin
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   padding: 16px 24px 56px;
   background: linear-gradient(180deg, var(--bg) 0%, #FFF1E6 100%);
 }
@@ -317,3 +318,10 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outlin
 /* ---------- Casilla de autorización ---------- */
 .form .check { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0 0; font-size: .85rem; font-weight: 400; color: var(--muted); }
 .form .check input { flex-shrink: 0; width: 18px; height: 18px; padding: 0; margin-top: 2px; border: 0; accent-color: var(--accent); }
+
+/* ---------- Formularios de tamaño fijo (el mensaje no los agranda) ---------- */
+.form .form-msg { height: 3.2em; overflow-y: auto; }
+
+/* ---------- Select de comuna ---------- */
+.cat-form select { width: 100%; font: inherit; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
+.cat-form select:focus { outline: none; border-color: var(--accent); }

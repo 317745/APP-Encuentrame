@@ -11,15 +11,20 @@ const ENDPOINTS = {
     registerAuth:    "/fundations/register/auth/",
     registerProfile: "/fundations/register/profile/",
     login:           "/fundations/login/"
+  },
+  collaborator: {
+    registerAuth:    "/collaborator/register/auth/",
+    registerProfile: "/collaborator/register/profile/",
+    login:           "/collaborator/login/"
   }
 };
 
 // A qué página va cada rol después de iniciar sesión
-const HOME = { user: "usuarios.html", fundation: "refugios.html" };
+const HOME = { user: "usuarios.html", fundation: "refugios.html", collaborator: "colaboradores.html" };
 
 // Endpoints de gatos
 // Valor de actor_type que guarda el backend en cada gato
-const ACTOR_TYPE = { user: "user", fundation: "foundation" };
+const ACTOR_TYPE = { user: "user", fundation: "foundation", collaborator: "collaborator" };
 
 const CATS = {
   byActor:     (actorId) => `/cats/${actorId}/cat_photos`,
