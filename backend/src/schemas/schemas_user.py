@@ -30,6 +30,7 @@ class User(SQLModel, table=True):
 
     id: uuid.UUID = Field(
         foreign_key="auth_users.id",
+        ondelete="CASCADE",
         primary_key=True,
         nullable=False,
         index=True

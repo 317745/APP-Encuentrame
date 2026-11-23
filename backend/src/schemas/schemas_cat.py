@@ -40,9 +40,10 @@ class Cats(SQLModel, table=True):
         nullable = False
     )
     
-    comuna: str = Field(
-        max_length = 255,
-        nullable = False
+    comuna: int = Field(
+        ge=1, 
+        le=22, 
+        nullable=False
     )
 
     created_at: datetime = Field(
@@ -62,6 +63,7 @@ class CatPhotos(SQLModel, table=True):
 
     cat_id: uuid.UUID = Field(
         foreign_key="cats.id",
+        ondelete="CASCADE",
         nullable=False,
         index=True
     )
@@ -89,6 +91,7 @@ class CatEmbeddings(SQLModel, table=True):
 
     cat_id: uuid.UUID = Field(
         foreign_key="cats.id",
+        ondelete="CASCADE",
         nullable=False,
         index=True
     )

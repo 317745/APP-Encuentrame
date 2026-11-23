@@ -1,54 +1,65 @@
-from fastapi import APIRouter, Depends, status, HTTPException
-from sqlmodel import text, Session, select
+import logging
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Session, select
 
+from schemas.schemas_user import AuthUser, User
 from services.connection import get_connection
-from schemas.schemas_user import User, AuthUser
 
-import uuid
+logger = logging.getLogger(__name__)
+router = APIRouter(prefix="/users")
 
-router = APIRouter(prefix='/users')
 
-#----------------------------------------- G E T -----------------------------------------
+# ----------------------------------------- G E T -----------------------------------------
 
 @router.get("/", status_code=status.HTTP_200_OK)
 async def get_users(session: Session = Depends(get_connection)):
     try:
-        statement = select(User)
-        results = session.exec(statement).all()
-
+        results = session.exec(select(User)).all()
         return {
-            'msg': 'The users information was resolved successfully',
-            'info': results
+            "msg": "Información de usuarios obtenida con éxito.",
+            "info": results,
         }
-    
     except Exception as e:
+        logger.error(f"Error al consultar usuarios: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"The users information could not be resolved: {str(e)}"
+            detail="No pudimos obtener la lista de usuarios en este momento.",
         )
 
-#----------------------------------------- P O S T -----------------------------------------
+
+# ----------------------------------------- P O S T -----------------------------------------
 
 @router.post("/register/auth/", status_code=status.HTTP_201_CREATED)
 async def register_auth(auth_data: AuthUser, session: Session = Depends(get_connection)):
+    existing = session.exec(
+        select(AuthUser).where(AuthUser.email == auth_data.email)
+    ).first()
+    if existing:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Ese correo ya está registrado. Intenta iniciar sesión o usa otro correo.",
+        )
+
     try:
         session.add(auth_data)
         session.commit()
         session.refresh(auth_data)
 
-        new_auth_record = dict(auth_data)
-
         return {
-            'msg': 'Auth credential created successfully. Use this ID to create your user profile.',
-            'data': new_auth_record
+            "msg": "Credenciales creadas con éxito. Usa este ID para completar tu perfil de usuario.",
+            "data": {
+                "id": str(auth_data.id),
+                "email": auth_data.email,
+            },
         }
-    
     except Exception as e:
         session.rollback()
+        logger.error(f"Error al registrar auth de usuario: {e}")
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not register auth credential (email might already exist): {str(e)}"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="No pudimos crear tus credenciales en este momento. Intenta de nuevo más tarde.",
         )
+
 
 @router.post("/register/profile/", status_code=status.HTTP_201_CREATED)
 async def register_user(user_data: User, session: Session = Depends(get_connection)):
@@ -57,18 +68,18 @@ async def register_user(user_data: User, session: Session = Depends(get_connecti
         session.commit()
         session.refresh(user_data)
 
-        new_user_record = dict(user_data)
-
         return {
-            'msg': 'User profile created successfully.',
-            'data': new_user_record
+            "msg": "Perfil de usuario creado con éxito.",
+            "data": user_data.model_dump(),
         }
     except Exception as e:
         session.rollback()
+        logger.error(f"Error al registrar perfil de usuario: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not register user profile: {str(e)}"
+            detail="No se pudo guardar tu perfil. Revisa los datos enviados o si este ID ya tiene un perfil.",
         )
+
 
 @router.post("/login/", status_code=status.HTTP_200_OK)
 async def login(credentials: AuthUser, session: Session = Depends(get_connection)):
@@ -79,18 +90,18 @@ async def login(credentials: AuthUser, session: Session = Depends(get_connection
     if not auth or auth.password != credentials.password:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Correo o contraseña incorrectos"
+            detail="Correo o contraseña incorrectos.",
         )
 
     user = session.get(User, auth.id)
 
     return {
-        "msg": "Login correcto",
+        "msg": "Inicio de sesión exitoso.",
         "data": {
             "id": str(auth.id),
             "email": auth.email,
             "name": user.name if user else None,
             "created_at": user.created_at if user else None,
-            "actor_type": "user"
-        }
+            "actor_type": "user",
+        },
     }

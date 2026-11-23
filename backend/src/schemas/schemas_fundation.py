@@ -31,6 +31,7 @@ class Foundation(SQLModel, table=True):
 
     id: uuid.UUID = Field(
         foreign_key="auth_foundations.id",
+        ondelete="CASCADE",
         primary_key=True,
         nullable=False,
         index=True

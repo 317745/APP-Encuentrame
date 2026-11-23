@@ -8,8 +8,9 @@ from services.connection import verify_connection, engine
 from schemas.schemas_cat import Cats, CatPhotos
 from schemas.schemas_fundation import Foundation, AuthFoundation
 from schemas.schemas_user import User, AuthUser
+from schemas.schemas_collaborator import Collaborator, AuthCollaborator
 
-from routers import routers_fundation, routers_cat, routers_user
+from routers import routers_fundation, routers_cat, routers_user, routers_collaborator
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,14 +19,11 @@ async def lifespan(app: FastAPI):
     yield
 
 app = FastAPI(lifespan=lifespan)
-
-@app.on_event("startup")
-def on_startup():
-    SQLModel.metadata.create_all(engine)
      
 app.include_router(routers_fundation.router)
 app.include_router(routers_cat.router)
 app.include_router(routers_user.router)
+app.include_router(routers_collaborator.router)
 
 app.add_middleware(
     CORSMiddleware,
