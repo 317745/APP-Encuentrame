@@ -30,6 +30,8 @@ const CATS = {
   byActor:     (actorId) => `/cats/${actorId}/cat_photos`,
   registerCat: "/cats/register/cat/",
   matches:     (catId) => `/cats/matches/cat/${catId}`,
-  uploadPhoto: "/cats/register/photo/"
+  uploadPhoto: "/cats/register/photo/",
+  deletePhoto: (photoId) => `/cats/delete_photo/${photoId}`,
+  deleteCat:   (catId) => `/cats/delete_cat/${catId}`
 };
 

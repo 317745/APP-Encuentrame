@@ -93,7 +93,7 @@ def get_cat_by_actor_id(actor_id: uuid.UUID, session: Session = Depends(get_conn
                 cats_map[cat.id] = cat_data
 
             if photo is not None:
-                cats_map[cat.id]["photos"].append(photo.image_url)
+                cats_map[cat.id]["photos"].append({"id": str(photo.id), "image_url": photo.image_url})
 
         cats_list = []
         for cat_data in cats_map.values():

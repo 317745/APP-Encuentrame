@@ -62,11 +62,65 @@
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(errorText(data, res));
 
-      const tip = typeof data.info === "string" ? data.info.replace(/\s+/g, " ").trim() : "";
       await load();
-      showMsg([data.message, tip].filter(Boolean).join(" "));
+      showMsg(data.message || "Foto registrada con éxito.");
     } catch (err) {
       console.error(err);
+      statusEl.textContent = err instanceof TypeError
+        ? "No se pudo conectar con el servidor."
+        : err.message;
+    }
+  }
+
+  /* ---------- guía para tomar fotos (ventana emergente) ---------- */
+  const guide = document.getElementById("guideModal");
+  if (guide) {
+    document.getElementById("guideClose").addEventListener("click", () => guide.close());
+    guide.addEventListener("click", (e) => { if (e.target === guide) guide.close(); });
+  }
+  const openGuide = () => { if (guide && !guide.open) guide.showModal(); };
+  document.querySelectorAll("[data-open-guide]").forEach(b => b.addEventListener("click", openGuide));
+
+  /* ---------- eliminar foto ---------- */
+  async function deletePhoto(cat, photo, btn, statusEl) {
+    if (!photo || !photo.id) return;
+    if (!confirm("¿Eliminar esta foto de " + (cat.name || "este gato") + "? Esta acción no se puede deshacer.")) return;
+
+    btn.disabled = true;
+    statusEl.textContent = "Eliminando foto…";
+    try {
+      const res = await fetch(API_BASE + CATS.deletePhoto(photo.id), { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(errorText(data, res));
+
+      await load();
+      showMsg(data.msg || "Foto eliminada.");
+    } catch (err) {
+      console.error(err);
+      btn.disabled = false;
+      statusEl.textContent = err instanceof TypeError
+        ? "No se pudo conectar con el servidor."
+        : err.message;
+    }
+  }
+
+  /* ---------- eliminar gato (con todas sus fotos) ---------- */
+  async function deleteCat(cat, btn, statusEl) {
+    const name = cat.name || "este gato";
+    if (!confirm("¿Eliminar a " + name + " y todas sus fotos? Esta acción no se puede deshacer.")) return;
+
+    btn.disabled = true;
+    statusEl.textContent = "Eliminando gato…";
+    try {
+      const res = await fetch(API_BASE + CATS.deleteCat(cat.id), { method: "DELETE" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(errorText(data, res));
+
+      await load();
+      showMsg(name + " fue eliminado.");
+    } catch (err) {
+      console.error(err);
+      btn.disabled = false;
       statusEl.textContent = err instanceof TypeError
         ? "No se pudo conectar con el servidor."
         : err.message;
@@ -188,25 +242,35 @@
   /* ---------- tarjeta de gato ---------- */
   function renderCat(cat) {
     const name = cat.name || "Gato sin nombre";
-    const photos = cat.photos || [];
+    // Acepta ["url", ...] o [{ id, image_url }, ...]; solo con id se puede eliminar
+    const photos = (cat.photos || []).map(ph =>
+      typeof ph === "string" ? { id: null, url: ph } : { id: ph.id || null, url: ph.image_url || ph.url });
     const count = cat.photos_count ?? photos.length;
 
-    // foto principal + miniaturas
+    // foto principal + miniaturas + eliminar
     let gallery;
     if (photos.length) {
-      const main = h("img", { class: "cat__main", src: photos[0], alt: "Foto de " + name, loading: "lazy" });
+      let current = 0;
+      const main = h("img", { class: "cat__main", src: photos[0].url, alt: "Foto de " + name, loading: "lazy" });
       const thumbs = h("div", { class: "cat__thumbs" });
-      photos.forEach((url, i) => {
+      const delBtn = h("button", { type: "button", class: "btn btn--ghost btn--small btn--danger" }, "Eliminar esta foto");
+
+      photos.forEach((ph, i) => {
         const btn = h("button", { type: "button", class: "cat__thumb" + (i === 0 ? " is-active" : ""), "aria-label": "Ver foto " + (i + 1) },
-          h("img", { src: url, alt: "", loading: "lazy" }));
+          h("img", { src: ph.url, alt: "", loading: "lazy" }));
         btn.addEventListener("click", () => {
-          main.src = url;
+          current = i;
+          main.src = ph.url;
           thumbs.querySelectorAll(".cat__thumb").forEach(b => b.classList.remove("is-active"));
           btn.classList.add("is-active");
+          delBtn.hidden = !photos[current].id;
         });
         thumbs.append(btn);
       });
-      gallery = h("div", {}, main, thumbs);
+
+      delBtn.hidden = !photos[0].id;
+      delBtn.addEventListener("click", () => deletePhoto(cat, photos[current], delBtn, statusEl));
+      gallery = h("div", {}, main, thumbs, delBtn);
     } else {
       gallery = h("div", { class: "cat__empty" }, "Aún sin fotos");
     }
@@ -239,12 +303,19 @@
       matchesBtn.addEventListener("click", () => openMatches(cat, count));
     }
 
+    const guideBtn = guide ? h("button", { type: "button", class: "link-btn" }, "Guía para tomar fotos") : null;
+    if (guideBtn) guideBtn.addEventListener("click", openGuide);
+
+    const delCatBtn = h("button", { type: "button", class: "btn btn--ghost btn--small btn--danger" }, "Eliminar gato");
+    delCatBtn.addEventListener("click", () => deleteCat(cat, delCatBtn, statusEl));
+
     return h("article", { class: "card cat" },
       h("div", { class: "cat__head" },
         h("h2", { class: "card__title" }, name),
         h("span", { class: "cat__count" }, count + "/" + MAX_PHOTOS + " fotos")),
       gallery, dl,
-      h("div", { class: "cat__actions" }, upload, matchesBtn),
+      h("div", { class: "cat__actions" }, upload, matchesBtn, delCatBtn),
+      guideBtn,
       statusEl);
   }
 

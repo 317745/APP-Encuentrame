@@ -325,3 +325,43 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outlin
 /* ---------- Select de comuna ---------- */
 .cat-form select { width: 100%; font: inherit; padding: 12px 14px; border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); }
 .cat-form select:focus { outline: none; border-color: var(--accent); }
+
+/* ---------- Botón eliminar foto ---------- */
+.btn--danger { margin-top: 10px; color: #B4443A; border-color: #F0C9C4; }
+.btn--danger:hover { background: #FBE4E1; border-color: #FBE4E1; }
+.cat__actions .btn--danger { margin-top: 0; }
+
+/* ---------- Guía de fotos ---------- */
+.cat-form__head { display: flex; justify-content: space-between; align-items: center; gap: 8px 16px; flex-wrap: wrap; }
+.link-btn { background: none; border: 0; padding: 0; font: inherit; font-size: .9rem; font-weight: 600; color: var(--ink); text-decoration: underline; cursor: pointer; align-self: flex-start; }
+.link-btn:hover { color: #B4663F; }
+
+.guide__lead { margin: 0; }
+.guide__examples { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.guide__ex { margin: 0; display: flex; flex-direction: column; gap: 8px; border-radius: 16px; padding: 10px; }
+.guide__ex--ok { background: var(--mint); }
+.guide__ex--bad { background: #FBE4E1; }
+.guide__ex img { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 12px; background: #fff; }
+.guide__ex figcaption { font-size: .85rem; color: #3F3C49; }
+.guide__ex strong { display: block; font-size: .95rem; }
+.guide__list { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: .9rem; color: #4A4755; }
+@media (max-width: 520px) { .guide__examples { grid-template-columns: 1fr; } }
+
+/* ---------- Aviso de mayoría de edad ---------- */
+.age-notice { background: var(--peach); border-radius: 12px; padding: 12px 14px; font-size: .9rem; margin-bottom: 4px; color: var(--ink); }
+.age-notice strong { display: block; }
+
+/* ---------- Cómo funciona ---------- */
+.how { max-width: 1080px; margin: 0 auto; padding: 24px 24px 72px; }
+.how__hero { display: flex; flex-direction: column; align-items: center; padding-bottom: 40px; }
+.how__mascot { width: 150px; height: 150px; object-fit: contain; margin-bottom: -16px; position: relative; z-index: 1; }
+.how__intro { max-width: 720px; width: 100%; padding: 32px 28px 24px; }
+.how__intro .card__title { font-size: 1.6rem; margin-bottom: 10px; }
+.how__intro p + p { margin-top: 12px; }
+.how__title { text-align: center; font-size: 1.6rem; font-weight: 800; margin: 0 0 24px; }
+.how__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.step { border-color: transparent; }
+.step p { color: #4A4755; }
+.step__n { flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; background: #fff; display: grid; place-items: center; font-weight: 800; }
+.how__note { max-width: 720px; margin: 36px auto 0; background: var(--peach); border-radius: var(--radius); padding: 18px 22px; text-align: center; font-weight: 600; }
+@media (max-width: 900px) { .how__grid { grid-template-columns: 1fr; } }

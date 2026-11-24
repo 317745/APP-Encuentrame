@@ -22,8 +22,8 @@
       <a href="index.html" class="nav__link">Inicio</a>
       <a href="colaboradores.html" class="nav__link">Colaboradores</a>
       <a href="usuarios.html" class="nav__link">Usuarios</a>
-      <a href="como-funciona.html" class="nav__link">Cómo funciona</a>
       <a href="refugios.html" class="nav__link">Refugios</a>
+      <a href="como-funciona.html" class="nav__link">Cómo funciona</a>
     </nav>
   </header>
 
@@ -75,7 +75,10 @@
     </section>
 
     <form id="catForm" class="card cat-form" novalidate>
-      <h2 class="card__title">Registrar un gato encontrado</h2>
+      <div class="cat-form__head">
+        <h2 class="card__title">Registrar un gato encontrado</h2>
+        <button type="button" class="link-btn" data-open-guide>📷 ¿Cómo tomar buenas fotos?</button>
+      </div>
       <div class="cat-form__fields">
         <div>
           <label for="catName">Nombre</label>
@@ -92,6 +95,36 @@
     <p id="dashMsg" class="form-msg" role="status" aria-live="polite"></p>
     <div class="cat-grid" id="catGrid"></div>
   </main>
+
+  <dialog class="modal" id="guideModal" aria-labelledby="guideTitle">
+    <div class="modal__box">
+      <div class="modal__head">
+        <h2 class="modal__title" id="guideTitle">Cómo tomar buenas fotos</h2>
+        <button type="button" class="modal__close" id="guideClose" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="modal__body">
+        <p class="guide__lead">Varía los ángulos: toma fotos de frente, de lado, de espalda y de cerca. Si siempre las tomas desde el mismo lado, el sistema no va a poder reconocer sus marcas únicas.</p>
+
+        <div class="guide__examples">
+          <figure class="guide__ex guide__ex--ok">
+            <img src="https://vzvnzsgmflrgdnkaipxl.supabase.co/storage/v1/object/public/cat-photos/cats/3e997ef0-b374-4ff0-b8e1-17947060811d.jpeg" alt="Ejemplo de foto correcta: un solo gato, bien iluminado" loading="lazy" referrerpolicy="no-referrer">
+            <figcaption><strong>✓ Así sí</strong>Un solo gato, con buena luz y bien enfocado.</figcaption>
+          </figure>
+          <figure class="guide__ex guide__ex--bad">
+            <img src="https://i.pinimg.com/564x/a7/68/3b/a7683b625b1889e038229751f99f6c46.jpg" alt="Ejemplo de foto incorrecta: varios gatos y de noche" loading="lazy" referrerpolicy="no-referrer">
+            <figcaption><strong>✗ Así no</strong>Varios gatos en la misma foto y de noche, con poca luz.</figcaption>
+          </figure>
+        </div>
+
+        <ul class="guide__list">
+          <li>Un solo gato por foto.</li>
+          <li>Buena luz: mejor de día. Las fotos de noche o con poca luz le cuestan más al modelo.</li>
+          <li>Que el gato se vea completo y nítido, ni muy lejos ni borroso.</li>
+          <li>Máximo 5 fotos por gato, en formato JPG o JPEG.</li>
+        </ul>
+      </div>
+    </div>
+  </dialog>
 
   <script src="session.js"></script>
   <script src="config.js"></script>

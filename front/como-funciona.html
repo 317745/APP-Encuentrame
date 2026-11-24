@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cómo funciona · Encuéntrame</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="header">
+    <a href="index.html" class="brand">
+      <img src="img/logo.png" alt="" class="brand__logo">
+      <span class="brand__name">Encuéntrame</span>
+    </a>
+
+    <button class="menu-btn" id="menuBtn" aria-label="Abrir menú" aria-expanded="false">☰</button>
+
+    <nav class="nav" id="nav">
+      <a href="index.html" class="nav__link">Inicio</a>
+      <a href="colaboradores.html" class="nav__link">Colaboradores</a>
+      <a href="usuarios.html" class="nav__link">Usuarios</a>
+      <a href="refugios.html" class="nav__link">Refugios</a>
+      <a href="como-funciona.html" class="nav__link">Cómo funciona</a>
+    </nav>
+  </header>
+
+  <main class="how">
+    <section class="how__hero">
+      <img src="img/mascota-hero.png" alt="" class="how__mascot">
+      <article class="card how__intro">
+        <div>
+          <h1 class="card__title">IA al servicio de quienes más queremos</h1>
+          <p>Vimos en la inteligencia artificial una herramienta poderosa para hacer el bien: poner la tecnología a trabajar de forma útil, humana y responsable. Este proyecto nace por amor a los animales y con la idea de ayudar a que los que se pierden vuelvan a casa.</p>
+          <p>Por ahora nos enfocamos únicamente en gatitos para construir algo firme y bien afinado desde cero. Más adelante sumaremos perritos y seguiremos creciendo.</p>
+        </div>
+      </article>
+    </section>
+
+    <section class="how__steps">
+      <h2 class="how__title">¿Qué pasa cuando subes una foto?</h2>
+      <div class="how__grid">
+        <article class="card card--mint step">
+          <span class="step__n">1</span>
+          <div>
+            <h3 class="card__title">Encuentra al gato</h3>
+            <p>El sistema ubica al gatito en la imagen y deja de lado el fondo para enfocarse en lo que importa.</p>
+          </div>
+        </article>
+        <article class="card card--sky step">
+          <span class="step__n">2</span>
+          <div>
+            <h3 class="card__title">Convierte su apariencia en un patrón</h3>
+            <p>Traduce sus rasgos visuales en una representación matemática única, como una firma visual del animal.</p>
+          </div>
+        </article>
+        <article class="card card--lilac step">
+          <span class="step__n">3</span>
+          <div>
+            <h3 class="card__title">Compara en segundos</h3>
+            <p>Busca entre los registros existentes y ordena las similitudes más cercanas al instante para darte pistas rápidas y conectar con quienes pueden ayudar.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <p class="how__note">No es magia ni promete infalibilidad, pero es una forma real de sumar tecnología y comunidad por el bienestar de los animales.</p>
+  </main>
+
+  <script src="session.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
