@@ -37,14 +37,23 @@ async def get_cats(session: Session = Depends(get_connection)):
             detail="No pudimos obtener la lista de gatos en este momento.",
         )
 
-@router.get("/photos/", status_code=status.HTTP_200_OK)
-async def get_cat_photos(session: Session = Depends(get_connection)):
+@router.get("/{cat_id}/photos/", status_code=status.HTTP_200_OK)
+async def get_photos_by_cat_id(cat_id: uuid.UUID, session: Session = Depends(get_connection)):
     try:
-        results = session.exec(select(CatPhotos)).all()
+        photos = session.exec(
+            select(CatPhotos).where(CatPhotos.cat_id == cat_id)).all()
+        if not photos:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="No hay fotos del gatito registradas.",
+            )
+        
         return {
             "msg": "Fotos obtenidas con éxito.",
-            "info": results,
+            "info": photos,
         }
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error al consultar fotos de gatos: {e}")
         raise HTTPException(

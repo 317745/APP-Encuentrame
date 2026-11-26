@@ -30,6 +30,9 @@ const CATS = {
   byActor:     (actorId) => `/cats/${actorId}/cat_photos`,
   registerCat: "/cats/register/cat/",
   matches:     (catId) => `/cats/matches/cat/${catId}`,
+  // Fotos de UN gato. Si lo pones en null se usa GET /cats/photos/ (todas) y se filtra por cat_id en el front.
+  photosByCat: (catId) => `/cats/${catId}/photos/`,
+  allPhotos:   "/cats/photos/",
   uploadPhoto: "/cats/register/photo/",
   deletePhoto: (photoId) => `/cats/delete_photo/${photoId}`,
   deleteCat:   (catId) => `/cats/delete_cat/${catId}`

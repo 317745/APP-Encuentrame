@@ -192,13 +192,20 @@
     const photo = m.image_url
       ? h("img", { class: "match__img", src: m.image_url, alt: "Foto de " + m.name, loading: "lazy" })
       : h("div", { class: "match__img match__img--empty" }, "Sin foto");
+    const top = h("div", { class: "match__top match__top--btn", role: "button", tabindex: "0", "aria-label": "Ver las fotos de " + m.name },
+      photo,
+      h("div", { class: "match__info" },
+        h("strong", {}, m.name),
+        h("div", { class: "match__bar" }, h("span", { style: "width:" + pct + "%" })),
+        h("small", { class: "match__hint" }, "Toca para ver sus fotos")),
+      h("span", { class: "match__pct" }, Math.round(pct) + "%"));
+    top.addEventListener("click", () => openCatPhotos(m));
+    top.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openCatPhotos(m); }
+    });
+
     return h("li", { class: "match" },
-      h("div", { class: "match__top" },
-        photo,
-        h("div", { class: "match__info" },
-          h("strong", {}, m.name),
-          h("div", { class: "match__bar" }, h("span", { style: "width:" + pct + "%" }))),
-        h("span", { class: "match__pct" }, Math.round(pct) + "%")),
+      top,
       orgBlock(m, cat));
   }
 
@@ -206,6 +213,67 @@
     const list = h("ul", { class: "matches__list" });
     matches.forEach(m => list.append(matchItem(m, cat)));
     modalBody.replaceChildren(list, note("Es una sugerencia automática: confirma comparando las fotos antes de contactar."));
+  }
+
+  /* ---------- fotos de un gato coincidente (ventana sobre la ventana) ---------- */
+  const photosModal = document.getElementById("catPhotosModal");
+  const photosTitle = document.getElementById("catPhotosTitle");
+  const photosBody = document.getElementById("catPhotosBody");
+  if (photosModal) {
+    document.getElementById("catPhotosClose").addEventListener("click", () => photosModal.close());
+    photosModal.addEventListener("click", (e) => { if (e.target === photosModal) photosModal.close(); });
+  }
+
+  async function fetchCatPhotos(catId) {
+    const dedicated = typeof CATS.photosByCat === "function";
+    const res = await fetch(API_BASE + (dedicated ? CATS.photosByCat(catId) : CATS.allPhotos));
+    if (dedicated && res.status === 404) return [];      // "no hay fotos" no es un error
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(errorText(data, res));
+
+    const raw = Array.isArray(data.info) ? data.info : ((data.info && data.info.photos) || data.photos || []);
+    return raw
+      .filter(ph => dedicated || typeof ph === "string" || String(ph.cat_id) === String(catId))
+      .map(ph => typeof ph === "string" ? ph : (ph.image_url || ph.url))
+      .filter(Boolean);
+  }
+
+  function renderViewer(urls, name) {
+    const main = h("img", { class: "viewer__main", src: urls[0], alt: "Foto de " + name });
+    const thumbs = h("div", { class: "cat__thumbs" });
+    urls.forEach((url, i) => {
+      const btn = h("button", { type: "button", class: "cat__thumb" + (i === 0 ? " is-active" : ""), "aria-label": "Ver foto " + (i + 1) },
+        h("img", { src: url, alt: "" }));
+      btn.addEventListener("click", () => {
+        main.src = url;
+        thumbs.querySelectorAll(".cat__thumb").forEach(b => b.classList.remove("is-active"));
+        btn.classList.add("is-active");
+      });
+      thumbs.append(btn);
+    });
+    photosBody.replaceChildren(main, thumbs, note(urls.length + (urls.length === 1 ? " foto" : " fotos") + " de " + name));
+  }
+
+  async function openCatPhotos(m) {
+    if (!photosModal) return;
+    const name = m.name || "este gato";
+    photosTitle.textContent = "Fotos de " + name;
+    photosBody.replaceChildren(note("Cargando fotos…"));
+    if (!photosModal.open) photosModal.showModal();
+
+    try {
+      const urls = (await fetchCatPhotos(m.cat_id)).slice(0, 5);
+      if (!urls.length) {
+        photosBody.replaceChildren(note("Este gato aún no tiene fotos."));
+        return;
+      }
+      renderViewer(urls, name);
+    } catch (err) {
+      console.error(err);
+      photosBody.replaceChildren(note(err instanceof TypeError
+        ? "No se pudo conectar con el servidor."
+        : "No pudimos cargar las fotos: " + err.message));
+    }
   }
 
   async function openMatches(cat, count) {
