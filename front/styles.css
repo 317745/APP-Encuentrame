@@ -372,3 +372,6 @@ a:focus-visible, button:focus-visible { outline: 3px solid var(--accent); outlin
 .match__top--btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 .match__hint { font-size: .75rem; color: var(--muted); }
 .viewer__main { width: 100%; aspect-ratio: 1; object-fit: contain; background: var(--lilac); border-radius: 12px; display: block; }
+
+/* ---------- Imágenes JPG con fondo blanco: se funden con el fondo de la página ---------- */
+.brand__logo, .hero__img, .auth__mascot, .how__mascot, .card__icon { mix-blend-mode: multiply; }
